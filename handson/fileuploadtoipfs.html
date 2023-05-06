@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Upload and Share Slides using IPFS</title>
+</head>
+<body>
+	<h1>Upload and Share Slides using IPFS</h1>
+
+	<form id="upload-form">
+		<label for="file">Select File:</label>
+		<input type="file" name="file" id="file" required>
+		<br>
+		<label for="name">File Name:</label>
+		<input type="text" name="name" id="name" required>
+		<br>
+		<button type="submit">Upload File</button>
+	</form>
+
+	<div id="result"></div>
+
+	<h2>Shared Slides</h2>
+
+	<ul id="shared-files"></ul>
+
+	<script src="https://unpkg.com/ipfs-http-client"></script>
+	<script>
+		// Create an IPFS client instance
+		const ipfs = window.ipfsHttpClient({ host: 'ipfs.infura.io', port: 5001, protocol: 'https' });
+
+		// Handle form submission
+		document.getElementById('upload-form').addEventListener('submit', async (event) => {
+			event.preventDefault();
+
+			// Get file and name input values
+			const file = event.target.elements.file.files[0];
+			const name = event.target.elements.name.value;
+
+			// Upload file to IPFS
+			const fileAdded = await ipfs.add(file);
+
+			// Get CID of the uploaded file
+			const cid = fileAdded.cid.toString();
+
+			// Create a link for sharing the file
+			const link = `https://gateway.ipfs.io/ipfs/${cid}/${name}`;
+
+			// Display the link to the user
+			document.getElementById('result').innerHTML = `<p><a href="${link}" target="_blank">${name}</a> (${cid})</p>`;
+
+			// Clear the form input values
+			event.target.elements.file.value = '';
+			event.target.elements.name.value = '';
+
+			// Refresh the shared files list
+			refreshSharedFiles();
+		});
+
+		// Display shared files on page load
+		window.addEventListener('load', refreshSharedFiles);
+
+		// Refresh shared files list
+		async function refreshSharedFiles() {
+			// Clear the shared files list
+			document.getElementById('shared-files').innerHTML = '';
+
+			// Get all files added to IPFS
+			const files = await ipfs.files.ls('/');
+
+			// Display links for each file
+			files.forEach(file => {
+				// Ignore directories
+				if (file.type === 'directory') return;
+
+				// Get the file name and CID
+				const name = file.name;
+				const cid = file.cid.toString();
+
+				// Create a link for sharing the file
+				const link = `https://gateway.ipfs.io/ipfs/${cid}/${name}`;
+
+				// Add the link to the shared files list
+				document.getElementById('shared-files').innerHTML += `<li><a href="${link}" target="_blank">${name}</a> (${cid})</li>`;
+			});
+		}
+	</script>
+</body>
+</html>
